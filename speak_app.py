@@ -14,6 +14,17 @@ from AppKit import (NSEvent, NSFlagsChangedMask, NSImage, NSBitmapImageRep,
                     NSPNGFileType, NSGraphicsContext, NSRect, NSZeroRect, NSColor)
 
 
+def _make_sf_icon(symbol, path, size=16):
+    sym = NSImage.imageWithSystemSymbolName_accessibilityDescription_(symbol, None)
+    out = NSImage.alloc().initWithSize_((size, size))
+    out.lockFocus()
+    NSGraphicsContext.currentContext().setImageInterpolation_(3)
+    sym.drawInRect_(((0, 0), (size, size)))
+    out.unlockFocus()
+    bmp = NSBitmapImageRep.alloc().initWithData_(out.TIFFRepresentation())
+    bmp.representationUsingType_properties_(NSPNGFileType, {}).writeToFile_atomically_(path, True)
+
+
 def _make_icon(path, size=14):
     sym = NSImage.imageWithSystemSymbolName_accessibilityDescription_("ear", None)
     out = NSImage.alloc().initWithSize_((size, size))
@@ -35,6 +46,7 @@ selected_voice = "Samantha"
 selected_speed = 240
 
 caps_event_times = []
+caps_last_state = False
 
 
 def speak(text):
@@ -53,11 +65,15 @@ def stop_speaking():
 
 
 def handle_flags_event(event):
-    global caps_event_times
+    global caps_event_times, caps_last_state
     flags = event.modifierFlags()
-    caps_active = bool(flags & (1 << 16))
+    caps_now = bool(flags & (1 << 16))
 
-    # Count every caps lock state change (on or off)
+    # Only react to caps lock changes, ignore shift/cmd/opt/ctrl
+    if caps_now == caps_last_state:
+        return
+    caps_last_state = caps_now
+
     now = time.time()
     caps_event_times.append(now)
     caps_event_times[:] = [t for t in caps_event_times if now - t < 0.8]
@@ -69,7 +85,9 @@ def handle_flags_event(event):
 class SpeakApp(rumps.App):
     def __init__(self):
         icon_path = "/Users/eliefrancis/Apps/SpeakApp/icon.png"
+        self._mic_icon_path = "/Users/eliefrancis/Apps/SpeakApp/mic.png"
         _make_icon(icon_path)
+        _make_sf_icon("mic.fill", self._mic_icon_path, size=15)
         super().__init__("", icon=icon_path, template=True, quit_button="Quit")
         rumps.Timer(self._resize_icon, 0.3).start()
 
@@ -80,6 +98,7 @@ class SpeakApp(rumps.App):
             self._nsapp.nsstatusitem.setImage_(img)
         self.menu = [
             rumps.MenuItem("Type to Speak...", callback=self.type_to_speak),
+            rumps.MenuItem("Start Dictation", callback=self.start_dictation, icon=self._mic_icon_path),
             rumps.MenuItem("Stop Speaking", callback=self.stop),
             None,
             rumps.MenuItem("Voice"),
@@ -123,6 +142,12 @@ class SpeakApp(rumps.App):
         ).run()
         if response.clicked and response.text.strip():
             threading.Thread(target=speak, args=(response.text,), daemon=True).start()
+
+    def start_dictation(self, _):
+        subprocess.Popen([
+            "osascript", "-e",
+            'tell application "System Events" to key code 63\ntell application "System Events" to key code 63'
+        ])
 
     def stop(self, _):
         stop_speaking()
