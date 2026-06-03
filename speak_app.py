@@ -76,7 +76,7 @@ def handle_flags_event(event):
 
     now = time.time()
     caps_event_times.append(now)
-    caps_event_times[:] = [t for t in caps_event_times if now - t < 0.8]
+    caps_event_times[:] = [t for t in caps_event_times if now - t < 1.5]
     if len(caps_event_times) >= 2:
         caps_event_times.clear()
         stop_speaking()
@@ -112,7 +112,7 @@ class SpeakApp(rumps.App):
         rumps.Timer(self._setup_monitor, 0.5).start()
 
     def _setup_monitor(self, _):
-        NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
+        self._monitor = NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
             NSFlagsChangedMask, handle_flags_event
         )
 
