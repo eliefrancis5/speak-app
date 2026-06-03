@@ -10,7 +10,22 @@ import subprocess
 import threading
 import time
 
-from AppKit import NSEvent, NSFlagsChangedMask
+from AppKit import (NSEvent, NSFlagsChangedMask, NSImage, NSBitmapImageRep,
+                    NSPNGFileType, NSGraphicsContext, NSRect, NSZeroRect, NSColor)
+
+
+def _make_icon(path, size=14):
+    sym = NSImage.imageWithSystemSymbolName_accessibilityDescription_("ear", None)
+    out = NSImage.alloc().initWithSize_((size, size))
+    out.lockFocus()
+    ctx = NSGraphicsContext.currentContext()
+    ctx.setImageInterpolation_(3)  # NSImageInterpolationHigh
+    NSColor.blackColor().set()
+    rect = NSRect((0, 0), (size, size))
+    sym.drawInRect_(rect)
+    out.unlockFocus()
+    bmp = NSBitmapImageRep.alloc().initWithData_(out.TIFFRepresentation())
+    bmp.representationUsingType_properties_(NSPNGFileType, {}).writeToFile_atomically_(path, True)
 
 VOICES = ["Samantha", "Alex", "Victoria", "Tom", "Ava", "Susan"]
 SPEEDS = {"Slow": 140, "Normal": 190, "Fast": 250, "Very Fast": 320}
@@ -53,7 +68,16 @@ def handle_flags_event(event):
 
 class SpeakApp(rumps.App):
     def __init__(self):
-        super().__init__("🔊", quit_button="Quit")
+        icon_path = "/Users/eliefrancis/Apps/SpeakApp/icon.png"
+        _make_icon(icon_path)
+        super().__init__("", icon=icon_path, template=True, quit_button="Quit")
+        rumps.Timer(self._resize_icon, 0.3).start()
+
+    def _resize_icon(self, _):
+        img = self._nsapp.nsstatusitem.image()
+        if img:
+            img.setSize_((16, 16))
+            self._nsapp.nsstatusitem.setImage_(img)
         self.menu = [
             rumps.MenuItem("Type to Speak...", callback=self.type_to_speak),
             rumps.MenuItem("Stop Speaking", callback=self.stop),
