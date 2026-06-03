@@ -42,8 +42,8 @@ VOICES = ["Samantha", "Alex", "Victoria", "Tom", "Ava", "Susan"]
 SPEEDS = {"Slow": 140, "Normal": 190, "Fast": 250, "Very Fast": 320}
 
 current_process = None
-selected_voice = "Samantha"
-selected_speed = 240
+selected_voice = "Samantha (Enhanced)"
+selected_speed = 203
 
 caps_event_times = []
 caps_last_state = False
