@@ -10,7 +10,7 @@ import subprocess
 import threading
 import time
 
-from AppKit import (NSEvent, NSFlagsChangedMask, NSImage, NSBitmapImageRep,
+from AppKit import (NSEvent, NSFlagsChangedMask, NSKeyDownMask, NSImage, NSBitmapImageRep,
                     NSPNGFileType, NSGraphicsContext, NSRect, NSZeroRect, NSColor)
 
 
@@ -45,8 +45,8 @@ current_process = None
 selected_voice = "Samantha (Enhanced)"
 selected_speed = 203
 
-caps_event_times = []
-caps_last_state = False
+tab_event_times = []
+TAB_KEY_CODE = 48
 
 
 def speak(text):
@@ -64,21 +64,18 @@ def stop_speaking():
         current_process = None
 
 
-def handle_flags_event(event):
-    global caps_event_times, caps_last_state
-    flags = event.modifierFlags()
-    caps_now = bool(flags & (1 << 16))
-
-    # Only react to caps lock changes, ignore shift/cmd/opt/ctrl
-    if caps_now == caps_last_state:
+def handle_key_event(event):
+    global tab_event_times
+    if event.keyCode() != TAB_KEY_CODE:
         return
-    caps_last_state = caps_now
-
     now = time.time()
-    caps_event_times.append(now)
-    caps_event_times[:] = [t for t in caps_event_times if now - t < 1.5]
-    if len(caps_event_times) >= 2:
-        caps_event_times.clear()
+    # Filter to events within 0.5s window, but require at least 0.1s gap from last press
+    tab_event_times[:] = [t for t in tab_event_times if now - t < 0.5]
+    if tab_event_times and now - tab_event_times[-1] < 0.1:
+        return  # key repeat, ignore
+    tab_event_times.append(now)
+    if len(tab_event_times) >= 2:
+        tab_event_times.clear()
         stop_speaking()
 
 
@@ -113,7 +110,7 @@ class SpeakApp(rumps.App):
 
     def _setup_monitor(self, _):
         self._monitor = NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
-            NSFlagsChangedMask, handle_flags_event
+            NSKeyDownMask, handle_key_event
         )
 
     def _build_voice_menu(self):
