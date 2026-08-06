@@ -1,10 +1,11 @@
-#!/usr/bin/env python3.13
+#!/usr/bin/env python3
 """
 SpeakApp — macOS menu bar TTS app
 - Double-tap Caps Lock to stop speaking
 - Menu bar icon with voice + speed settings
 """
 
+import os
 import rumps
 import subprocess
 import threading
@@ -42,7 +43,7 @@ VOICES = ["Samantha", "Alex", "Victoria", "Tom", "Ava", "Susan"]
 SPEEDS = {"Slow": 140, "Normal": 190, "Fast": 250, "Very Fast": 320}
 
 current_process = None
-selected_voice = "Samantha (Enhanced)"
+selected_voice = "Samantha"
 selected_speed = 203
 
 tab_event_times = []
@@ -81,8 +82,10 @@ def handle_key_event(event):
 
 class SpeakApp(rumps.App):
     def __init__(self):
-        icon_path = "/Users/eliefrancis/Apps/SpeakApp/icon.png"
-        self._mic_icon_path = "/Users/eliefrancis/Apps/SpeakApp/mic.png"
+        _icon_dir = os.path.join(os.path.expanduser("~"), ".speak-app")
+        os.makedirs(_icon_dir, exist_ok=True)
+        icon_path = os.path.join(_icon_dir, "icon.png")
+        self._mic_icon_path = os.path.join(_icon_dir, "mic.png")
         _make_icon(icon_path)
         _make_sf_icon("mic.fill", self._mic_icon_path, size=15)
         super().__init__("", icon=icon_path, template=True, quit_button="Quit")

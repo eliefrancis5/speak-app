@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.open-next/
+dist/
+.venv/
+__pycache__/
+*.tsbuildinfo
+.DS_Store
+*.log
